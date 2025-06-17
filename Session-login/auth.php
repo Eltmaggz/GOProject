@@ -1,43 +1,42 @@
 <?php
 session_start();
+require 'db.php';
 
-$users = $_SESSION['users'] ?? [];
-
-// Get form data
 $username = $_POST['username'] ?? '';
 $password = $_POST['password'] ?? '';
 $role = $_POST['role'] ?? '';
 $action = $_POST['action'] ?? '';
 
-// Simulate user store in session
-if (!isset($_SESSION['users'])) {
-    $_SESSION['users'] = [];
-}
-
-// Register user
-if ($action == "register") {
-    if (isset($users[$username])) {
+if ($action == 'register') {
+    // Check if user exists
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt->execute([$username]);
+    if ($stmt->rowCount() > 0) {
         echo "User already exists. <a href='index.php'>Back</a>";
         exit;
     }
-    $_SESSION['users'][$username] = [
-        'password' => $password,
-        'role' => $role
-    ];
+
+    // Insert user
+    $stmt = $pdo->prepare("INSERT INTO users (username, password, role) VALUES (?, ?, ?)");
+    $stmt->execute([$username, $password, $role]);
     $_SESSION['user'] = $username;
     $_SESSION['role'] = $role;
     header("Location: dashboard.php");
     exit;
 }
 
-// Login user
-if ($action == "login") {
-    if (!isset($users[$username]) || $users[$username]['password'] != $password) {
+if ($action == 'login') {
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? AND password = ?");
+    $stmt->execute([$username, $password]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
         echo "Invalid credentials. <a href='index.php'>Back</a>";
         exit;
     }
-    $_SESSION['user'] = $username;
-    $_SESSION['role'] = $users[$username]['role'];
+
+    $_SESSION['user'] = $user['username'];
+    $_SESSION['role'] = $user['role'];
     header("Location: dashboard.php");
     exit;
 }
